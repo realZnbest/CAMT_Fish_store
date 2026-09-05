@@ -1,5 +1,5 @@
 const API = {
-  products: '../products.php',
+  products: '../backend/products.php',
   login: '../login.php',
   register: '../register.php',
   order: '../place_order.php'
@@ -39,11 +39,27 @@ function escapeHtml(value) {
 async function loadProducts() {
   const target = document.querySelector('[data-products]');
   if (!target) return;
+  const status = document.querySelector('[data-db-status]');
+  const raw = document.querySelector('[data-raw-json]');
+  const message = document.querySelector('[data-monitor-message]');
+  const setStatus = (label, state) => {
+    if (!status) return;
+    status.textContent = `Database Status: ${label}`;
+    status.dataset.state = state;
+  };
+  setStatus('Checking...', 'loading');
   try {
     const products = await request(API.products);
+    if (!Array.isArray(products)) throw new Error('The database returned an unexpected response.');
     target.innerHTML = products.length ? products.map(productCard).join('') : '<div class="empty-state">The collection is being prepared. Please return shortly.</div>';
+    if (raw) raw.textContent = JSON.stringify(products, null, 2);
+    if (message) message.textContent = '';
+    setStatus('Connected', 'connected');
   } catch (error) {
     target.innerHTML = `<div class="error-state">${escapeHtml(error.message)} Please check the PHP service and try again.</div>`;
+    if (raw) raw.textContent = JSON.stringify({ status: 'error', message: error.message }, null, 2);
+    if (message) message.textContent = 'The live database query could not be completed.';
+    setStatus('Unavailable', 'error');
   }
 }
 
