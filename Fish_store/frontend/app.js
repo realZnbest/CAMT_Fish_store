@@ -11,10 +11,16 @@ const fishIcon = () => `<svg viewBox="0 0 240 140" fill="none" aria-hidden="true
 const fishImages = {
   1: 'https://a-z-animals.com/media/2022/04/shutterstock_228322159.jpg',
   2: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXl9LfIIzF1SqUUcoW__MBJZSulb1SivbLfyHAuR7xeT7LrHP8et3-5iA&s=10',
-  3: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyCFpXoCWkbd-B-LcKEJbrclF2Jx7cqSGvHBu8UPxK0lSdZwsnMx6utp0&s=10',
-  4: 'https://biogeodb.stri.si.edu/caribbean/resources/img/images/species/3514_9458.jpg',
-  5: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR9Jpl1zZVDdq21j2O1ZYg-9W2EkwLx4zBIXJFoPu_Wi0DLFgz5wH7b0fu&s=10',
+  3: 'https://cdn.shopify.com/s/files/1/0794/9497/1635/files/GID629_PA_3.jpg?v=1764167297',
+  5: 'https://biogeodb.stri.si.edu/caribbean/resources/img/images/species/3514_9458.jpg',
+  4: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyCFpXoCWkbd-B-LcKEJbrclF2Jx7cqSGvHBu8UPxK0lSdZwsnMx6utp0&s=10',
   6: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR9Jpl1zZVDdq21j2O1ZYg-9W2EkwLx4zBIXJFoPu_Wi0DLFgz5wH7b0fu&s=10'
+};
+
+const fishVisual = (product, imageClass = '') => {
+  const imageUrl = fishImages[product.id];
+  if (!imageUrl) return fishIcon();
+  return `<img class="${imageClass}" src="${imageUrl}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${fishIcon()}</span>`;
 };
 
 async function request(url, options = {}) {
@@ -37,9 +43,7 @@ async function request(url, options = {}) {
 function productCard(product) {
   const productUrl = `product.html?id=${encodeURIComponent(product.id)}`;
   const checkoutUrl = `checkout.html?id=${encodeURIComponent(product.id)}`;
-  const imageUrl = fishImages[product.id];
-  const visual = imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${fishIcon()}</span>` : fishIcon();
-  return `<article class="product-card" data-reveal><div class="product-visual">${visual}</div><div><div class="product-meta"><h3>${escapeHtml(product.name)}</h3><span class="price">${money(product.price)}</span></div><p class="description">${escapeHtml(product.description || 'A considered selection from the deep.')}</p><div class="actions"><a class="button secondary" href="${productUrl}">View specimen</a><a class="button" href="${checkoutUrl}">Buy now</a></div></div></article>`;
+  return `<article class="product-card" data-reveal><div class="product-visual">${fishVisual(product)}</div><div><div class="product-meta"><h3>${escapeHtml(product.name)}</h3><span class="price">${money(product.price)}</span></div><p class="description">${escapeHtml(product.description || 'A considered selection from the deep.')}</p><div class="actions"><a class="button secondary" href="${productUrl}">View specimen</a><a class="button" href="${checkoutUrl}">Buy now</a></div></div></article>`;
 }
 
 function escapeHtml(value) {
@@ -95,7 +99,7 @@ async function loadCheckout() {
     const products = await request(API.products);
     const product = products.find((item) => String(item.id) === String(id));
     if (!product) throw new Error('This specimen could not be found.');
-    summary.innerHTML = `<p class="kicker">Your selection</p><h2>${escapeHtml(product.name)}</h2><div class="summary-row"><span>Unit price</span><strong>${money(product.price)}</strong></div><div class="summary-row"><span>Quantity</span><strong data-quantity-label>1</strong></div><div class="summary-row total"><span>Total</span><strong data-total>${money(product.price)}</strong></div>`;
+    summary.innerHTML = `<div class="checkout-product-visual">${fishVisual(product, 'checkout-product-image')}</div><p class="kicker">Your selection</p><h2>${escapeHtml(product.name)}</h2><div class="summary-row"><span>Unit price</span><strong>${money(product.price)}</strong></div><div class="summary-row"><span>Quantity</span><strong data-quantity-label>1</strong></div><div class="summary-row total"><span>Total</span><strong data-total>${money(product.price)}</strong></div>`;
     const quantityInput = document.querySelector('[name="quantity"]');
     const update = () => { const quantity = Math.max(1, Number(quantityInput.value || 1)); document.querySelector('[data-quantity-label]').textContent = quantity; document.querySelector('[data-total]').textContent = money(Number(product.price) * quantity); };
     quantityInput.addEventListener('input', update);
