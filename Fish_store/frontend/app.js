@@ -42,8 +42,31 @@ async function request(url, options = {}) {
 
 function productCard(product) {
   const productUrl = `product.html?id=${encodeURIComponent(product.id)}`;
-  const checkoutUrl = `checkout.html?id=${encodeURIComponent(product.id)}`;
-  return `<article class="product-card" data-reveal><div class="product-visual">${fishVisual(product)}</div><div><div class="product-meta"><h3>${escapeHtml(product.name)}</h3><span class="price">${money(product.price)}</span></div><p class="description">${escapeHtml(product.description || 'A considered selection from the deep.')}</p><div class="actions"><a class="button secondary" href="${productUrl}">View specimen</a><a class="button" href="${checkoutUrl}">Buy now</a></div></div></article>`;
+  return `<article class="product-card" data-reveal><div class="product-visual">${fishVisual(product)}</div><div><div class="product-meta"><h3>${escapeHtml(product.name)}</h3><span class="price">${money(product.price)}</span></div><p class="description">${escapeHtml(product.description || 'A considered selection from the deep.')}</p><div class="actions"><a class="button secondary" href="${productUrl}">View specimen</a><button class="button" type="button" data-add-to-cart data-product-id="${escapeHtml(product.id)}" data-product-name="${escapeHtml(product.name)}" data-product-price="${escapeHtml(product.price)}">Add to cart</button></div></div></article>`;
+}
+
+function showCartNotice(message) {
+  let notice = document.querySelector('[data-cart-notice]');
+  if (!notice) {
+    notice = document.createElement('div');
+    notice.className = 'cart-notice';
+    notice.dataset.cartNotice = '';
+    notice.setAttribute('role', 'status');
+    document.body.append(notice);
+  }
+  notice.textContent = message;
+  notice.classList.add('is-visible');
+  window.clearTimeout(notice.timeoutId);
+  notice.timeoutId = window.setTimeout(() => notice.classList.remove('is-visible'), 2400);
+}
+
+function bindAddToCartButtons() {
+  document.querySelectorAll('[data-add-to-cart]').forEach((button) => {
+    button.addEventListener('click', () => {
+      addToCart({ id: button.dataset.productId, name: button.dataset.productName, price: button.dataset.productPrice });
+      showCartNotice(`${button.dataset.productName} added to your cart.`);
+    });
+  });
 }
 
 function escapeHtml(value) {
@@ -66,6 +89,7 @@ async function loadProducts() {
     const products = await request(API.products);
     if (!Array.isArray(products)) throw new Error('The database returned an unexpected response.');
     target.innerHTML = products.length ? products.map(productCard).join('') : '<div class="empty-state">The collection is being prepared. Please return shortly.</div>';
+    bindAddToCartButtons();
     if (raw) raw.textContent = JSON.stringify(products, null, 2);
     if (message) message.textContent = '';
     setStatus('Connected', 'connected');
@@ -86,35 +110,48 @@ async function loadProductDetail() {
     const products = await request(API.products);
     const product = products.find((item) => String(item.id) === String(id));
     if (!product) throw new Error('This specimen could not be found.');
-    target.innerHTML = `<div class="detail-visual">${fishIcon()}</div><div class="detail-copy"><p class="kicker">Private collection / specimen ${escapeHtml(product.id)}</p><h1>${escapeHtml(product.name)}</h1><span class="price">${money(product.price)}</span><p class="description">${escapeHtml(product.description || 'A rare selection, held to exacting standards and ready for a considered table.')}</p><div class="actions"><a class="button" href="checkout.html?id=${encodeURIComponent(product.id)}">Buy now</a><a class="button secondary" href="products.html">Back to collection</a></div></div>`;
+    target.innerHTML = `<div class="detail-visual">${fishVisual(product)}</div><div class="detail-copy"><p class="kicker">Private collection / specimen ${escapeHtml(product.id)}</p><h1>${escapeHtml(product.name)}</h1><span class="price">${money(product.price)}</span><p class="description">${escapeHtml(product.description || 'A rare selection, held to exacting standards and ready for a considered table.')}</p><div class="actions"><button class="button" type="button" data-add-to-cart data-product-id="${escapeHtml(product.id)}" data-product-name="${escapeHtml(product.name)}" data-product-price="${escapeHtml(product.price)}">Add to cart</button><a class="button secondary" href="products.html">Back to collection</a></div></div>`;
+    bindAddToCartButtons();
   } catch (error) { target.innerHTML = `<div class="error-state">${escapeHtml(error.message)}</div>`; }
 }
 
 async function loadCheckout() {
   const summary = document.querySelector('[data-order-summary]');
   if (!summary) return;
-  const id = getProductId();
-  if (!id) { summary.innerHTML = '<div class="error-state">No item was selected for checkout.</div>'; return; }
-  try {
-    const products = await request(API.products);
-    const product = products.find((item) => String(item.id) === String(id));
-    if (!product) throw new Error('This specimen could not be found.');
-    summary.innerHTML = `<div class="checkout-product-visual">${fishVisual(product, 'checkout-product-image')}</div><p class="kicker">Your selection</p><h2>${escapeHtml(product.name)}</h2><div class="summary-row"><span>Unit price</span><strong>${money(product.price)}</strong></div><div class="summary-row"><span>Quantity</span><strong data-quantity-label>1</strong></div><div class="summary-row total"><span>Total</span><strong data-total>${money(product.price)}</strong></div>`;
-    const quantityInput = document.querySelector('[name="quantity"]');
-    const update = () => { const quantity = Math.max(1, Number(quantityInput.value || 1)); document.querySelector('[data-quantity-label]').textContent = quantity; document.querySelector('[data-total]').textContent = money(Number(product.price) * quantity); };
-    quantityInput.addEventListener('input', update);
-    document.querySelector('[data-checkout-form]').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const message = document.querySelector('[data-form-message]');
-      const userId = localStorage.getItem('user_id');
-      if (!userId) { message.textContent = 'Please sign in before placing an order.'; return; }
-      const quantity = Math.max(1, Number(quantityInput.value || 1));
-      const formData = new FormData();
-      formData.append('user_id', userId); formData.append('product_id', product.id); formData.append('quantity', quantity); formData.append('total_price', Number(product.price) * quantity);
-      try { const orderResponse = await request(API.order, { method: 'POST', body: formData }); localStorage.setItem('last_order', JSON.stringify({ order_id: orderResponse.order_id, name: product.name, quantity, price: Number(product.price), total: Number(product.price) * quantity, created_at: orderResponse.created_at || new Date().toISOString() })); window.location.href = 'success.html'; }
-      catch (error) { message.textContent = error.message; }
-    });
-  } catch (error) { summary.innerHTML = `<div class="error-state">${escapeHtml(error.message)}</div>`; }
+  const form = document.querySelector('[data-checkout-form]');
+  const message = document.querySelector('[data-form-message]');
+  const render = () => {
+    const cart = getCart();
+    if (!cart.length) {
+      summary.innerHTML = '<div class="empty-state"><p>Your cart is waiting for a considered selection.</p><a class="button" href="products.html">Browse the collection</a></div>';
+      form.querySelector('button[type="submit"]').disabled = true;
+      return;
+    }
+    summary.innerHTML = `<p class="kicker">Your selection</p><h1>Cart summary.</h1><div class="cart-list">${cart.map((item) => `<div class="cart-item"><div class="cart-item-visual">${fishVisual(item, 'cart-item-image')}</div><div class="cart-item-details"><h2>${escapeHtml(item.name)}</h2><p>${money(item.price)} each</p></div><div class="cart-item-controls"><label>Quantity <input type="number" min="1" max="999" value="${item.quantity}" data-cart-quantity="${escapeHtml(item.id)}"></label><strong>${money(item.price * item.quantity)}</strong><button class="text-button" type="button" data-remove-item="${escapeHtml(item.id)}">Remove item</button></div></div>`).join('')}</div><div class="summary-row total"><span>Total</span><strong>${money(getCartTotal())}</strong></div><button class="button secondary cart-clear" type="button" data-clear-cart>Clear cart</button>`;
+    form.querySelector('button[type="submit"]').disabled = false;
+    summary.querySelectorAll('[data-cart-quantity]').forEach((input) => input.addEventListener('change', () => { updateCartItemQuantity(input.dataset.cartQuantity, input.value); render(); }));
+    summary.querySelectorAll('[data-remove-item]').forEach((button) => button.addEventListener('click', () => { removeFromCart(button.dataset.removeItem); render(); }));
+    summary.querySelector('[data-clear-cart]').addEventListener('click', () => { clearCart(); render(); });
+  };
+  render();
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const userId = localStorage.getItem('user_id');
+    if (!userId) { message.textContent = 'Please sign in before placing an order.'; return; }
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    message.textContent = '';
+    try {
+      const orderResponse = await request('../backend/checkout.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: Number(userId), items: getCart().map(({ id, quantity }) => ({ id, quantity })) }) });
+      const firstItem = orderResponse.items[0];
+      const quantity = orderResponse.items.reduce((total, item) => total + item.quantity, 0);
+      const orderDetails = { order_id: orderResponse.order_id, name: orderResponse.items.map((item) => item.name).join(', '), quantity, price: firstItem.price, total: orderResponse.total_price, created_at: orderResponse.created_at || new Date().toISOString() };
+      localStorage.setItem('last_order', JSON.stringify(orderDetails));
+      clearCart();
+      const params = new URLSearchParams({ order_id: orderDetails.order_id, product_name: orderDetails.name, quantity: orderDetails.quantity, item_price: orderDetails.price, total_price: orderDetails.total, created_at: orderDetails.created_at });
+      window.location.href = `success.html?${params.toString()}`;
+    } catch (error) { message.textContent = error.message; button.disabled = false; }
+  });
 }
 
 function bindForm(selector, endpoint, successPath) {
@@ -161,8 +198,22 @@ function renderSuccess() {
   document.querySelector('[data-print-receipt]')?.addEventListener('click', () => window.print());
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function initializeApp() {
   loadProducts(); loadProductDetail(); loadCheckout(); renderSuccess();
   bindForm('[data-login-form]', API.login, 'products.html');
   bindForm('[data-register-form]', API.register, 'login.html');
-});
+}
+
+function loadCartScript() {
+  if (typeof getCart === 'function') {
+    initializeApp();
+    return;
+  }
+  const cartScript = document.createElement('script');
+  cartScript.src = 'cart.js';
+  cartScript.addEventListener('load', initializeApp, { once: true });
+  document.head.append(cartScript);
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadCartScript, { once: true });
+else loadCartScript();
