@@ -8,6 +8,14 @@ const API = {
 const money = (value) => `฿${Number(value || 0).toLocaleString('en-US')}`;
 const getProductId = () => new URLSearchParams(window.location.search).get('id');
 const fishIcon = () => `<svg viewBox="0 0 240 140" fill="none" aria-hidden="true"><path d="M23 70c31-38 81-46 126-19l50-30-13 35 29 14-29 14 13 35-50-30C104 116 54 108 23 70Z" stroke="currentColor" stroke-width="4"/><circle cx="70" cy="57" r="4" fill="currentColor"/><path d="M112 49c14 13 14 29 0 42" stroke="currentColor" stroke-width="3"/></svg>`;
+const fishImages = {
+  1: 'https://a-z-animals.com/media/2022/04/shutterstock_228322159.jpg',
+  2: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXl9LfIIzF1SqUUcoW__MBJZSulb1SivbLfyHAuR7xeT7LrHP8et3-5iA&s=10',
+  3: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyCFpXoCWkbd-B-LcKEJbrclF2Jx7cqSGvHBu8UPxK0lSdZwsnMx6utp0&s=10',
+  4: 'https://biogeodb.stri.si.edu/caribbean/resources/img/images/species/3514_9458.jpg',
+  5: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR9Jpl1zZVDdq21j2O1ZYg-9W2EkwLx4zBIXJFoPu_Wi0DLFgz5wH7b0fu&s=10',
+  6: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRR9Jpl1zZVDdq21j2O1ZYg-9W2EkwLx4zBIXJFoPu_Wi0DLFgz5wH7b0fu&s=10'
+};
 
 async function request(url, options = {}) {
   const controller = new AbortController();
@@ -29,7 +37,9 @@ async function request(url, options = {}) {
 function productCard(product) {
   const productUrl = `product.html?id=${encodeURIComponent(product.id)}`;
   const checkoutUrl = `checkout.html?id=${encodeURIComponent(product.id)}`;
-  return `<article class="product-card" data-reveal><div class="product-visual">${fishIcon()}</div><div><div class="product-meta"><h3>${escapeHtml(product.name)}</h3><span class="price">${money(product.price)}</span></div><p class="description">${escapeHtml(product.description || 'A considered selection from the deep.')}</p><div class="actions"><a class="button secondary" href="${productUrl}">View specimen</a><a class="button" href="${checkoutUrl}">Buy now</a></div></div></article>`;
+  const imageUrl = fishImages[product.id];
+  const visual = imageUrl ? `<img src="${imageUrl}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${fishIcon()}</span>` : fishIcon();
+  return `<article class="product-card" data-reveal><div class="product-visual">${visual}</div><div><div class="product-meta"><h3>${escapeHtml(product.name)}</h3><span class="price">${money(product.price)}</span></div><p class="description">${escapeHtml(product.description || 'A considered selection from the deep.')}</p><div class="actions"><a class="button secondary" href="${productUrl}">View specimen</a><a class="button" href="${checkoutUrl}">Buy now</a></div></div></article>`;
 }
 
 function escapeHtml(value) {
