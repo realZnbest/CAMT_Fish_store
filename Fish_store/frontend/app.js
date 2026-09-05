@@ -7,6 +7,8 @@ const API = {
 
 const money = (value) => `$${Number(value || 0).toLocaleString('en-US')}`;
 const getProductId = () => new URLSearchParams(window.location.search).get('id');
+const LOGIN_RETURN_KEY = 'login_return_to';
+const PENDING_CART_ITEM_KEY = 'pending_cart_item';
 const fishIcon = () => `<svg viewBox="0 0 240 140" fill="none" aria-hidden="true"><path d="M23 70c31-38 81-46 126-19l50-30-13 35 29 14-29 14 13 35-50-30C104 116 54 108 23 70Z" stroke="currentColor" stroke-width="4"/><circle cx="70" cy="57" r="4" fill="currentColor"/><path d="M112 49c14 13 14 29 0 42" stroke="currentColor" stroke-width="3"/></svg>`;
 const fishImages = {
   1: 'https://a-z-animals.com/media/2022/04/shutterstock_228322159.jpg',
@@ -63,10 +65,40 @@ function showCartNotice(message) {
 function bindAddToCartButtons() {
   document.querySelectorAll('[data-add-to-cart]').forEach((button) => {
     button.addEventListener('click', () => {
-      addToCart({ id: button.dataset.productId, name: button.dataset.productName, price: button.dataset.productPrice });
+      const product = { id: button.dataset.productId, name: button.dataset.productName, price: button.dataset.productPrice };
+      if (!localStorage.getItem('user_id')) {
+        localStorage.setItem(PENDING_CART_ITEM_KEY, JSON.stringify(product));
+        localStorage.setItem(LOGIN_RETURN_KEY, `${window.location.pathname}${window.location.search}`);
+        window.location.href = `login.html?return_to=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`;
+        return;
+      }
+      addToCart(product);
       showCartNotice(`${button.dataset.productName} added to your cart.`);
     });
   });
+}
+
+function renderAuthNavigation() {
+  const username = localStorage.getItem('username');
+  document.querySelectorAll('.nav-cta').forEach((link) => {
+    if (!username) return;
+    link.textContent = username;
+    link.removeAttribute('href');
+    link.setAttribute('aria-label', `Signed in as ${username}`);
+    link.setAttribute('aria-current', 'true');
+  });
+}
+
+function consumePendingCartItem() {
+  const pendingItem = localStorage.getItem(PENDING_CART_ITEM_KEY);
+  if (!pendingItem || !localStorage.getItem('user_id')) return;
+  try {
+    addToCart(JSON.parse(pendingItem));
+    showCartNotice('Selection added to your cart.');
+  } catch (error) {
+  }
+  localStorage.removeItem(PENDING_CART_ITEM_KEY);
+  localStorage.removeItem(LOGIN_RETURN_KEY);
 }
 
 function escapeHtml(value) {
@@ -166,7 +198,10 @@ function bindForm(selector, endpoint, successPath) {
     try {
       const data = await request(endpoint, { method: 'POST', body: new FormData(form) });
       if (data.user_id) localStorage.setItem('user_id', data.user_id);
-      window.location.href = successPath;
+      if (data.username) localStorage.setItem('username', data.username);
+      const returnTo = new URLSearchParams(window.location.search).get('return_to') || localStorage.getItem(LOGIN_RETURN_KEY);
+      const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : successPath;
+      window.location.href = safeReturnTo;
     } catch (error) { message.textContent = error.message; button.disabled = false; button.textContent = defaultLabel; }
   });
 }
@@ -199,9 +234,11 @@ function renderSuccess() {
 }
 
 function initializeApp() {
+  renderAuthNavigation();
   loadProducts(); loadProductDetail(); loadCheckout(); renderSuccess();
   bindForm('[data-login-form]', API.login, 'products.html');
   bindForm('[data-register-form]', API.register, 'login.html');
+  consumePendingCartItem();
 }
 
 function loadCartScript() {

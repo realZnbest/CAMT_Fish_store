@@ -66,4 +66,5 @@ $_SESSION['user_id'] = (int) $user_id;
 echo json_encode([
     'status' => 'success',
     'user_id' => (int) $user_id,
+    'username' => $username,
 ]);
