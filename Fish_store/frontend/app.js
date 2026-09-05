@@ -5,7 +5,7 @@ const API = {
   order: '../place_order.php'
 };
 
-const money = (value) => `฿${Number(value || 0).toLocaleString('en-US')}`;
+const money = (value) => `$${Number(value || 0).toLocaleString('en-US')}`;
 const getProductId = () => new URLSearchParams(window.location.search).get('id');
 const fishIcon = () => `<svg viewBox="0 0 240 140" fill="none" aria-hidden="true"><path d="M23 70c31-38 81-46 126-19l50-30-13 35 29 14-29 14 13 35-50-30C104 116 54 108 23 70Z" stroke="currentColor" stroke-width="4"/><circle cx="70" cy="57" r="4" fill="currentColor"/><path d="M112 49c14 13 14 29 0 42" stroke="currentColor" stroke-width="3"/></svg>`;
 const fishImages = {
