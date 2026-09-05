@@ -111,7 +111,7 @@ async function loadCheckout() {
       const quantity = Math.max(1, Number(quantityInput.value || 1));
       const formData = new FormData();
       formData.append('user_id', userId); formData.append('product_id', product.id); formData.append('quantity', quantity); formData.append('total_price', Number(product.price) * quantity);
-      try { await request(API.order, { method: 'POST', body: formData }); localStorage.setItem('last_order', JSON.stringify({ name: product.name, total: Number(product.price) * quantity })); window.location.href = 'success.html'; }
+      try { const orderResponse = await request(API.order, { method: 'POST', body: formData }); localStorage.setItem('last_order', JSON.stringify({ order_id: orderResponse.order_id, name: product.name, quantity, price: Number(product.price), total: Number(product.price) * quantity, created_at: orderResponse.created_at || new Date().toISOString() })); window.location.href = 'success.html'; }
       catch (error) { message.textContent = error.message; }
     });
   } catch (error) { summary.innerHTML = `<div class="error-state">${escapeHtml(error.message)}</div>`; }
@@ -135,10 +135,30 @@ function bindForm(selector, endpoint, successPath) {
 }
 
 function renderSuccess() {
-  const target = document.querySelector('[data-success-summary]');
-  if (!target) return;
-  const order = JSON.parse(localStorage.getItem('last_order') || 'null');
-  target.textContent = order ? `${order.name} · ${money(order.total)}` : 'Your order has been received.';
+  const card = document.querySelector('[data-confirmation-card]');
+  if (!card) return;
+  const params = new URLSearchParams(window.location.search);
+  let storedOrder = null;
+  try { storedOrder = JSON.parse(localStorage.getItem('last_order') || 'null'); } catch (error) { storedOrder = null; }
+  const order = { ...storedOrder, order_id: params.get('order_id') || storedOrder?.order_id, name: params.get('product_name') || storedOrder?.name, quantity: params.get('quantity') || storedOrder?.quantity, price: params.get('item_price') || storedOrder?.price, total: params.get('total_price') || storedOrder?.total, created_at: params.get('created_at') || storedOrder?.created_at };
+  if (!order.name || !order.total) {
+    card.hidden = true;
+    const empty = document.querySelector('[data-confirmation-empty]');
+    if (empty) empty.hidden = false;
+    window.setTimeout(() => { window.location.href = 'products.html'; }, 2600);
+    return;
+  }
+  const dollars = (value) => `$${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  const timestamp = order.created_at ? new Date(order.created_at) : null;
+  const fields = { reference: order.order_id ? `#ORD-${String(order.order_id).padStart(4, '0')}` : '#ORD-PENDING', item: `${order.name}`, quantity: Number(order.quantity || 1), price: dollars(order.price || Number(order.total) / Number(order.quantity || 1)), timestamp: timestamp && !Number.isNaN(timestamp.valueOf()) ? timestamp.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : 'Just now', total: dollars(order.total) };
+  document.querySelector('[data-success-summary]').textContent = `${fields.item} · ${dollars(order.total)}`;
+  document.querySelector('[data-order-reference]').textContent = fields.reference;
+  document.querySelector('[data-order-item]').textContent = fields.item;
+  document.querySelector('[data-order-quantity]').textContent = fields.quantity;
+  document.querySelector('[data-order-price]').textContent = fields.price;
+  document.querySelector('[data-order-timestamp]').textContent = fields.timestamp;
+  document.querySelector('[data-order-total]').textContent = fields.total;
+  document.querySelector('[data-print-receipt]')?.addEventListener('click', () => window.print());
 }
 
 document.addEventListener('DOMContentLoaded', () => {

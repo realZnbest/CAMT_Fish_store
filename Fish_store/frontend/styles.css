@@ -104,11 +104,31 @@ h3 { font-size: 2rem; }
 .checkout-product-visual svg { width: min(70%, 300px); height: auto; }
 .summary-row { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid rgba(127,228,223,.12); padding: 14px 0; color: var(--muted); }
 .summary-row.total { color: var(--white); font-size: 1.25rem; border-bottom: 0; }
-.success { min-height: calc(100vh - 90px); display: grid; place-items: center; text-align: center; padding: 70px 0; }
+.success { min-height: calc(100vh - 90px); padding: 75px 0 110px; }
+.confirmation { max-width: 840px; margin: 0 auto; }
+.confirmation-intro { text-align: center; animation: rise .8s cubic-bezier(.2,.8,.2,1) both; }
 .success-mark { width: 88px; height: 88px; border: 1px solid var(--gold); border-radius: 50%; color: var(--gold-soft); display: grid; place-items: center; margin: 0 auto 28px; }
 .success-mark svg { width: 40px; }
 .success h1 { font-size: clamp(4rem, 10vw, 8rem); }
-.success p { max-width: 45ch; margin: 24px auto 32px; color: var(--muted); }
+.confirmation-lede { max-width: 45ch; margin: 24px auto 42px; color: var(--muted); }
+.confirmation-card { position: relative; overflow: hidden; padding: clamp(26px, 5vw, 54px); border: 1px solid rgba(212,178,95,.42); background: linear-gradient(145deg, rgba(20,57,59,.92), rgba(7,20,24,.97) 72%); box-shadow: 0 30px 90px rgba(0,0,0,.28); text-align: left; animation: card-rise .9s .12s cubic-bezier(.2,.8,.2,1) both; }
+.confirmation-card::before { content: ""; position: absolute; width: 360px; aspect-ratio: 1; top: -230px; right: -120px; border: 1px solid rgba(127,228,223,.22); border-radius: 50%; pointer-events: none; }
+.confirmation-card-head { position: relative; display: flex; justify-content: space-between; align-items: start; gap: 20px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.card-eyebrow { margin: 0 0 9px; color: var(--cyan); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
+.confirmation-card h2 { font-size: clamp(2.4rem, 5vw, 4rem); }
+.status-badge-confirmed { color: var(--cyan); border-color: rgba(127,228,223,.38); }
+.confirmation-details { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 10%; padding: 20px 0 8px; }
+.confirmation-detail { display: flex; justify-content: space-between; gap: 18px; padding: 16px 0; border-bottom: 1px solid rgba(127,228,223,.12); color: var(--muted); }
+.confirmation-detail strong { max-width: 58%; color: var(--white); font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+.confirmation-total { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; padding: 28px 0 32px; color: var(--gold-soft); }
+.confirmation-total strong { font-family: var(--serif); font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 600; line-height: 1; }
+.confirmation-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.confirmation-actions .button { min-height: 46px; font-size: 13px; }
+.confirmation-actions svg { width: 18px; margin-right: 9px; }
+.confirmation-empty { max-width: 530px; margin: 40px auto; padding: 34px; border: 1px solid var(--line); color: var(--muted); text-align: center; }
+.confirmation-empty p:last-child { margin: 0; }
+@keyframes card-rise { from { opacity: 0; transform: translateY(22px); filter: blur(5px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+@media print { .site-header, .confirmation-intro, .confirmation-actions { display: none; } .site-shell { background: #fff; color: #111; } .success { padding: 0; } .confirmation-card { border-color: #999; box-shadow: none; background: #fff; } .confirmation-card h2, .confirmation-detail strong { color: #111; } .confirmation-detail, .confirmation-total { color: #333; } }
 
 .site-footer { max-width: 1240px; padding: 30px 5vw 45px; margin: 0 auto; color: #6f8988; font-size: 12px; border-top: 1px solid rgba(127,228,223,.12); }
 .loading { color: var(--muted); grid-column: 1 / -1; padding: 50px 0; }
@@ -143,5 +163,9 @@ h3 { font-size: 2rem; }
   .product-card, .product-card:nth-child(3n + 1) { grid-column: span 12; }
   .detail-visual { min-height: 330px; }
   .checkout-product-visual { height: 280px; margin-bottom: 34px; }
+  .confirmation-card-head { display: block; }
+  .confirmation-card-head .status-badge { margin-top: 20px; }
+  .confirmation-details { grid-template-columns: 1fr; }
+  .confirmation-actions .button { width: 100%; }
   h1 { font-size: clamp(3.7rem, 17vw, 6rem); }
 }

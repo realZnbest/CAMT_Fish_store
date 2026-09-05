@@ -49,6 +49,11 @@ if (!$statement->execute()) {
     exit;
 }
 
+$order_id = $statement->insert_id;
 $statement->close();
 
-echo json_encode(['status' => 'success']);
+echo json_encode([
+    'status' => 'success',
+    'order_id' => $order_id,
+    'created_at' => date('c'),
+]);
